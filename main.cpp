@@ -7,11 +7,21 @@
 
 #include <iostream>
 #include <cmath>
+#include <pthread/pthread.h>
 #include "tgaimage.h"
 
 int width = 1024, height = 1024;
 
-void createImg(int nmbr, double timeInterval) {
+struct thread_data {
+    int nmbr;
+    double timeInterval;
+};
+
+void *createImg(void *threadarg) {
+    struct thread_data *my_data;
+    my_data = (struct thread_data *) threadarg;
+    int nmbr = my_data->nmbr;
+    double timeInterval = my_data->timeInterval;
     TGAImage image(width, height, TGAImage::RGB);
     for (int y=0; y<width; y++) {
         for (int x=0; x<height; x++) {
@@ -27,7 +37,7 @@ void createImg(int nmbr, double timeInterval) {
             c[1] *= 2.5;
             c[0] += -0.75;
             
-            long double p[2] = {0.50011701007999932,0.54011501011999605};
+            long double p[2] = {0.50011701007999927,0.54011501011999593};
             p[0] -= 0.5;
             p[1] -= 0.5;
             p[0] *= 3.5;
@@ -35,7 +45,7 @@ void createImg(int nmbr, double timeInterval) {
             p[0] += -0.75;
             
             long double scale = pow(2.718, -timeInterval);
-            long double depth = 0.0000000000000005;
+            long double depth = 0.0000000000000001;
             scale = depth + (1.-depth) * scale;
             
             c[0] = c[0] - p[0];
@@ -48,7 +58,17 @@ void createImg(int nmbr, double timeInterval) {
             long double z[3];
             std::copy(std::begin(c), std::end(c), std::begin(z));
             
-            for (int i = 0; i<700; i++) {
+            int res = 1500;
+            /*
+            if (scale < depth*10000.) {
+                res = 1500;
+            } else if (scale < depth*10000000.) {
+                res = 700;
+            } else {
+                res = 400;
+            }
+            */
+            for (int i = 0; i<res; i++) {
                 long double d = z[1];
                 long double temp = d;
                 d = z[0]*d + z[0]*d;
@@ -58,9 +78,9 @@ void createImg(int nmbr, double timeInterval) {
                 std::copy(std::begin(outTemp), std::end(outTemp), std::begin(z));
                 long double length = sqrt((z[0]*z[0])+(z[1]*z[1]));
                   if (length > 2.) {
-                      col[0] = s[0] + (e[0]-s[0]) * (long double)(i)/50.;
-                      col[1] = s[1] + (e[1]-s[1]) * (long double)(i)/50.;
-                      col[2] = s[2] + (e[2]-s[2]) * (long double)(i)/50.;
+                      col[0] = s[0] + (e[0] - s[0]) * (long double)i/(long double)res;
+                      col[1] = s[1] + (e[1] - s[1]) * (long double)i/(long double)res;
+                      col[2] = s[2] + (e[2] - s[2]) * (long double)i/(long double)res;
                       break;
                   }
             }
@@ -78,17 +98,23 @@ void createImg(int nmbr, double timeInterval) {
         }
     }
     image.write_tga_file(std::to_string(nmbr) + ".tga");
+    std::cout << nmbr << std::endl;
+    pthread_exit(NULL);
 }
 
 int main(int argc, const char * argv[]) {
     long double time = 0.0;
-    for (int i=0; i<1; i++)  {
+    int frames = 1;
+    pthread_t threads[frames];
+    struct thread_data td[frames];
+    int rc;
+    for (int i=0; i<frames; i++)  {
         time += 1./2.;
-        createImg(i, time);
-        std::cout << i << std::endl;
+        td[i].nmbr = i;
+        td[i].timeInterval = time;
+        rc = pthread_create(&threads[i], NULL, createImg, (void *)&td[i]);
     }
-    std::cout << "done\n";
-    return 0;
+    pthread_exit(NULL);
 }
 /*
  x0 := scaled x coordinate of pixel (scaled to lie in the Mandelbrot X scale (-2.5, 1))
