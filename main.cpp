@@ -15,27 +15,27 @@ void createImg(int nmbr, double timeInterval) {
     TGAImage image(width, height, TGAImage::RGB);
     for (int y=0; y<width; y++) {
         for (int x=0; x<height; x++) {
-            double col[3] = {
+            long double col[3] = {
                            0., 0., 0.
                            };
-            double s[3] = {0.0, 0.0, 0.0};
-            double e[3] = {0.0, 1.0, 0.5};
-            double c[2] = {(double)x/width, (double)y/height};
+            long  double s[3] = {0.0, 0.0, 0.0};
+            long double e[3] = {0.0, 1.0, 0.5};
+            long double c[2] = {(long double)x/width, (long double)y/height};
             c[0] -= 0.5;
             c[1] -= 0.5;
             c[0] *= 3.5;
             c[1] *= 2.5;
             c[0] += -0.75;
             
-            double p[2] = {0.5001170100799993,0.5401150101199961};
+            long double p[2] = {0.50011701007999932,0.54011501011999605};
             p[0] -= 0.5;
             p[1] -= 0.5;
             p[0] *= 3.5;
             p[1] *= 2.5;
             p[0] += -0.75;
             
-            double scale = pow(2.718, -timeInterval);
-            double depth = 0.000000000000001;
+            long double scale = pow(2.718, -timeInterval);
+            long double depth = 0.0000000000000005;
             scale = depth + (1.-depth) * scale;
             
             c[0] = c[0] - p[0];
@@ -45,22 +45,22 @@ void createImg(int nmbr, double timeInterval) {
             c[0] = c[0] + p[0];
             c[1] = c[1] + p[1];
             
-            double z[3];
+            long double z[3];
             std::copy(std::begin(c), std::end(c), std::begin(z));
             
-            for (int i = 0; i<1000; i++) {
-                double d = z[1];
-                double temp = d;
+            for (int i = 0; i<700; i++) {
+                long double d = z[1];
+                long double temp = d;
                 d = z[0]*d + z[0]*d;
-                double outTemp[2] = {z[0]*z[0]+(temp*temp*-1.), d};
+                long double outTemp[2] = {z[0]*z[0]+(temp*temp*-1.), d};
                 outTemp[0] += c[0];
                 outTemp[1] += c[1];
                 std::copy(std::begin(outTemp), std::end(outTemp), std::begin(z));
-                double length = sqrt((z[0]*z[0])+(z[1]*z[1]));
+                long double length = sqrt((z[0]*z[0])+(z[1]*z[1]));
                   if (length > 2.) {
-                      col[0] = s[0] + (e[0]-s[0]) * double(i)/50.;
-                      col[1] = s[1] + (e[1]-s[1]) * double(i)/50.;
-                      col[2] = s[2] + (e[2]-s[2]) * double(i)/50.;
+                      col[0] = s[0] + (e[0]-s[0]) * (long double)(i)/50.;
+                      col[1] = s[1] + (e[1]-s[1]) * (long double)(i)/50.;
+                      col[2] = s[2] + (e[2]-s[2]) * (long double)(i)/50.;
                       break;
                   }
             }
@@ -81,7 +81,7 @@ void createImg(int nmbr, double timeInterval) {
 }
 
 int main(int argc, const char * argv[]) {
-    double time = 0.0;
+    long double time = 0.0;
     for (int i=0; i<1; i++)  {
         time += 1./2.;
         createImg(i, time);
@@ -90,6 +90,38 @@ int main(int argc, const char * argv[]) {
     std::cout << "done\n";
     return 0;
 }
+/*
+ x0 := scaled x coordinate of pixel (scaled to lie in the Mandelbrot X scale (-2.5, 1))
+     y0 := scaled y coordinate of pixel (scaled to lie in the Mandelbrot Y scale (-1, 1))
+     x := 0.0
+     y := 0.0
+     iteration := 0
+     max_iteration := 1000
+     // Here N = 2^8 is chosen as a reasonable bailout radius.
+
+     while x*x + y*y ≤ (1 << 16) and iteration < max_iteration do
+         xtemp := x*x - y*y + x0
+         y := 2*x*y + y0
+         x := xtemp
+         iteration := iteration + 1
+
+     // Used to avoid floating point issues with points inside the set.
+     if iteration < max_iteration then
+         // sqrt of inner term removed using log simplification rules.
+         log_zn := log(x*x + y*y) / 2
+         nu := log(log_zn / log(2)) / log(2)
+         // Rearranging the potential function.
+         // Dividing log_zn by log(2) instead of log(N = 1<<8)
+         // because we want the entire palette to range from the
+         // center to radius 2, NOT our bailout radius.
+         iteration := iteration + 1 - nu
+
+     color1 := palette[floor(iteration)]
+     color2 := palette[floor(iteration) + 1]
+     // iteration % 1 = fractional part of iteration.
+     color := linear_interpolate(color1, color2, iteration % 1)
+     plot(Px, Py, color)
+ */
 /*
 #version 410 core
 
